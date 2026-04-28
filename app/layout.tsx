@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Shared Calendar',
-  description: 'A shared calendar for two users',
+  title: 'Scott & Sue\'s Shared Calendar',
+  description: 'Shared calendar app built with Next.js, Tailwind CSS, and TypeScript',
 };
 
 export default function RootLayout({

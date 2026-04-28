@@ -3,6 +3,7 @@
 import { User } from '@/types';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { HouseHeart } from 'lucide-react';
 
 interface HeaderProps {
   user: User;
@@ -44,11 +45,12 @@ export default function Header({ user, onColorChange }: HeaderProps) {
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="flex items-center justify-center w-9 h-9 bg-indigo-100 rounded-lg">
-            <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
+            <div className="flex items-center justify-center w-9 h-9 bg-indigo-100 rounded-lg">
+              {/* Replacing the old calendar SVG with your new brand icon */}
+              <HouseHeart className="w-5 h-5 text-indigo-600" />
+            </div>
           </div>
-          <h1 className="text-lg font-semibold text-gray-900">Shared Calendar</h1>
+          <h1 className="text-lg font-semibold text-gray-900">Scott & Sue's Calendar</h1>
         </div>
 
         <div className="flex items-center gap-3">
