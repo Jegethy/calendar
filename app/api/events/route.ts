@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { syncEventToGoogle } from '@/lib/google-calendar';
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -50,9 +51,24 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Sync to Google Calendar (non-blocking)
+    syncEventToGoogle(
+      user.userId,
+      event.id,
+      event.title,
+      event.description,
+      event.startTime,
+      event.endTime,
+      event.rrule
+    ).catch(error => {
+      console.error('Failed to sync event to Google Calendar:', error);
+      // Don't fail the API call if Google sync fails
+    });
+
     return NextResponse.json({ event }, { status: 201 });
   } catch (error) {
     console.error('Create event error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+

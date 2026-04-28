@@ -9,14 +9,17 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  password  String
-  color     String   @default("#3b82f6")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  events    Event[]
+  id                  String   @id @default(cuid())
+  name                String
+  email               String   @unique
+  password            String
+  color               String   @default("#3b82f6")
+  googleAccessToken   String?
+  googleRefreshToken  String?
+  googleTokenExpiry   DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  events              Event[]
 }
 
 model Event {
