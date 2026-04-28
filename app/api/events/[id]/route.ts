@@ -20,6 +20,10 @@ export async function PUT(
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     }
 
+    if (existing.creatorId !== user.userId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const event = await prisma.event.update({
       where: { id: params.id },
       data: {
@@ -55,6 +59,10 @@ export async function DELETE(
   const existing = await prisma.event.findUnique({ where: { id: params.id } });
   if (!existing) {
     return NextResponse.json({ error: 'Event not found' }, { status: 404 });
+  }
+
+  if (existing.creatorId !== user.userId) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   await prisma.event.delete({ where: { id: params.id } });

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { User, Event } from '@/types';
 import Header from '@/components/Header';
 import Calendar from '@/components/Calendar';
@@ -33,6 +33,11 @@ export default function Home() {
   useEffect(() => {
     Promise.all([fetchUser(), fetchEvents()]).finally(() => setLoading(false));
   }, [fetchUser, fetchEvents]);
+
+  const uniqueCreators = useMemo(
+    () => Array.from(new Map(events.map((e) => [e.creator.id, e.creator])).values()),
+    [events]
+  );
 
   const handleDayClick = (date: Date) => {
     setSelectedEvent(null);
@@ -107,7 +112,7 @@ export default function Home() {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 md:p-6 h-full">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              {Array.from(new Map(events.map(e => [e.creator.id, e.creator])).values()).map(creator => (
+              {uniqueCreators.map((creator) => (
                 <div key={creator.id} className="flex items-center gap-1.5">
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: creator.color }} />
                   <span className="text-xs text-gray-600">{creator.name}</span>
