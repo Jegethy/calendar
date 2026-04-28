@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await getCurrentUser();
   if (!user) {
@@ -14,8 +14,9 @@ export async function PUT(
   try {
     const body = await request.json();
     const { title, description, startTime, endTime, rrule } = body;
+    const { id } = await params;
 
-    const existing = await prisma.event.findUnique({ where: { id: params.id } });
+    const existing = await prisma.event.findUnique({ where: { id } });
     if (!existing) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     }
@@ -25,7 +26,7 @@ export async function PUT(
     }
 
     const event = await prisma.event.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         title,
         description,
@@ -49,14 +50,16 @@ export async function PUT(
 
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const existing = await prisma.event.findUnique({ where: { id: params.id } });
+  const { id } = await params;
+
+  const existing = await prisma.event.findUnique({ where: { id } });
   if (!existing) {
     return NextResponse.json({ error: 'Event not found' }, { status: 404 });
   }
@@ -65,6 +68,6 @@ export async function DELETE(
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  await prisma.event.delete({ where: { id: params.id } });
+  await prisma.event.delete({ where: { id } });
   return NextResponse.json({ success: true });
 }

@@ -32,7 +32,7 @@ export async function verifyToken(token: string): Promise<JWTPayload | null> {
 }
 
 export async function getCurrentUser(): Promise<JWTPayload | null> {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const token = cookieStore.get('auth-token')?.value;
   if (!token) return null;
   return verifyToken(token);
