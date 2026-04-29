@@ -75,7 +75,7 @@ export default function Header({ user, onColorChange }: HeaderProps) {
           {isGoogleConnected ? (
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 font-semibold">
               <GoogleLogo size="sm" />
-              <span className="text-xs font-medium text-green-700 dark:text-green-400">G Linked</span>
+              <span className="text-xs font-medium text-green-700 dark:text-green-400">Linked</span>
             </div>
           ) : (
             <button
