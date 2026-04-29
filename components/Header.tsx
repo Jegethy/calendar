@@ -4,6 +4,7 @@ import { User } from '@/types';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { HouseHeart } from 'lucide-react';
+import GoogleLogo from './GoogleLogo';
 
 interface HeaderProps {
   user: User;
@@ -19,6 +20,18 @@ export default function Header({ user, onColorChange }: HeaderProps) {
     await fetch('/api/auth/logout', { method: 'POST' });
     router.push('/login');
     router.refresh();
+  };
+
+  const handleConnectGoogle = async () => {
+    try {
+      const res = await fetch('/api/auth/google');
+      const data = await res.json();
+      if (data.authUrl) {
+        window.location.href = data.authUrl;
+      }
+    } catch (error) {
+      console.error('Failed to get Google auth URL:', error);
+    }
   };
 
   const handleColorSave = async () => {
@@ -40,6 +53,8 @@ export default function Header({ user, onColorChange }: HeaderProps) {
     '#8b5cf6', '#ef4444', '#06b6d4', '#84cc16',
   ];
 
+  const isGoogleConnected = !!user.googleAccessToken;
+
   return (
     <header className="bg-white border-b border-gray-200 px-4 py-3">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -50,10 +65,25 @@ export default function Header({ user, onColorChange }: HeaderProps) {
               <HouseHeart className="w-5 h-5 text-indigo-600" />
             </div>
           </div>
-          <h1 className="text-lg font-semibold text-gray-900">Scott & Sue's Calendar</h1>
+          <h1 className="text-lg font-semibold text-gray-900">Scott & Sue&apos;s Calendar</h1>
         </div>
 
         <div className="flex items-center gap-3">
+          {isGoogleConnected ? (
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-green-50 border border-green-200">
+              <GoogleLogo size="sm" />
+              <span className="text-xs font-medium text-green-700">Linked</span>
+            </div>
+          ) : (
+            <button
+              onClick={handleConnectGoogle}
+              className="flex items-center gap-2 text-xs font-medium text-gray-700 px-3 py-1.5 rounded-lg border border-gray-300 hover:bg-gray-100 transition"
+            >
+              <GoogleLogo size="sm" />
+              <span>Connect Google Calendar</span>
+            </button>
+          )}
+
           <div className="relative">
             <button
               onClick={() => setShowColorPicker(!showColorPicker)}

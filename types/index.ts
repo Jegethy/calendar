@@ -3,6 +3,7 @@ export interface User {
   name: string;
   email: string;
   color: string;
+  googleAccessToken?: string | null;
 }
 
 export interface Event {
@@ -12,6 +13,8 @@ export interface Event {
   startTime: string;
   endTime: string;
   rrule?: string;
+  googleEventId?: string | null;
+  syncToGoogle: boolean;
   creatorId: string;
   creator: {
     id: string;
@@ -36,4 +39,5 @@ export interface CalendarEvent {
   endTime: Date;
   isRecurring: boolean;
   originalEvent: Event;
+  isSyncedToGoogle: boolean;
 }

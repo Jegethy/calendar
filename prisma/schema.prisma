@@ -1,7 +1,5 @@
 generator client {
-  provider = "prisma-client"
-  // We are moving it here so it's easier to find
-  output   = "./client"
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -23,14 +21,16 @@ model User {
 }
 
 model Event {
-  id          String   @id @default(cuid())
-  title       String
-  description String?
-  startTime   DateTime
-  endTime     DateTime
-  rrule       String?
-  creatorId   String
-  creator     User     @relation(fields: [creatorId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String   @id @default(cuid())
+  title         String
+  description   String?
+  startTime     DateTime
+  endTime       DateTime
+  rrule         String?
+  googleEventId String?
+  syncToGoogle  Boolean  @default(false)
+  creatorId     String
+  creator       User     @relation(fields: [creatorId], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }

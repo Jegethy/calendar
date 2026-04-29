@@ -134,6 +134,7 @@ export default function Home() {
             currentUser={user}
             onDayClick={handleDayClick}
             onEventClick={handleEventClick}
+            selectedDate={selectedDate}
           />
         </div>
       </main>

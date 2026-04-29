@@ -9,6 +9,7 @@ interface CalendarProps {
   currentUser: { id: string; name: string; color: string };
   onDayClick: (date: Date) => void;
   onEventClick: (event: Event) => void;
+  selectedDate?: Date | null;
 }
 
 function getCalendarDays(year: number, month: number, events: Event[]): CalendarDay[] {
@@ -61,6 +62,7 @@ function getCalendarDays(year: number, month: number, events: Event[]): Calendar
           endTime: occEnd,
           isRecurring: !!event.rrule,
           originalEvent: event,
+          isSyncedToGoogle: !!event.googleEventId,
         });
       }
     }
@@ -103,7 +105,7 @@ const MONTH_NAMES = [
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-export default function Calendar({ events, onDayClick, onEventClick }: CalendarProps) {
+export default function Calendar({ events, onDayClick, onEventClick, selectedDate }: CalendarProps) {
   const today = new Date();
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
@@ -170,6 +172,11 @@ export default function Calendar({ events, onDayClick, onEventClick }: CalendarP
             day.date.getFullYear() === today.getFullYear() &&
             day.date.getMonth() === today.getMonth() &&
             day.date.getDate() === today.getDate();
+          const isSelected =
+            selectedDate &&
+            day.date.getFullYear() === selectedDate.getFullYear() &&
+            day.date.getMonth() === selectedDate.getMonth() &&
+            day.date.getDate() === selectedDate.getDate();
           const maxVisible = 3;
           const visibleEvents = day.events.slice(0, maxVisible);
           const hiddenCount = day.events.length - maxVisible;
@@ -179,12 +186,18 @@ export default function Calendar({ events, onDayClick, onEventClick }: CalendarP
               key={idx}
               onClick={() => onDayClick(day.date)}
               className={`border-b border-r border-gray-200 p-1 min-h-[100px] cursor-pointer transition-colors ${
-                day.isCurrentMonth ? 'bg-white hover:bg-gray-50' : 'bg-gray-50/50'
+                isSelected
+                  ? 'bg-indigo-50 border-indigo-300'
+                  : day.isCurrentMonth
+                  ? 'bg-white hover:bg-gray-50'
+                  : 'bg-gray-50/50'
               }`}
             >
               <div className={`text-sm font-medium mb-1 w-7 h-7 flex items-center justify-center rounded-full ${
                 isToday
                   ? 'bg-indigo-600 text-white'
+                  : isSelected
+                  ? 'text-indigo-600'
                   : day.isCurrentMonth
                   ? 'text-gray-900'
                   : 'text-gray-400'
@@ -199,12 +212,18 @@ export default function Calendar({ events, onDayClick, onEventClick }: CalendarP
                       e.stopPropagation();
                       onEventClick(ev.originalEvent);
                     }}
-                    className="w-full text-left text-xs px-1.5 py-0.5 rounded truncate text-white font-medium block"
+                    className="w-full text-left text-xs px-1.5 py-0.5 rounded truncate text-white font-medium block relative"
                     style={{ backgroundColor: ev.color }}
                     title={ev.title}
                   >
-                    {ev.isRecurring && '↻ '}
-                    {ev.title}
+                    {/* Green sync indicator dot */}
+                    {ev.isSyncedToGoogle && (
+                      <div className="absolute left-0.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-green-400 rounded-full" />
+                    )}
+                    <span className={ev.isSyncedToGoogle ? 'pl-2.5' : ''}>
+                      {ev.isRecurring && '↻ '}
+                      {ev.title}
+                    </span>
                   </button>
                 ))}
                 {hiddenCount > 0 && (

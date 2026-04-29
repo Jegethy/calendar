@@ -60,7 +60,7 @@ export async function exchangeCodeForTokens(code: string, userId: string): Promi
 /**
  * Gets a valid OAuth2 client for a user, refreshing tokens if necessary
  */
-async function getValidOAuth2Client(userId: string): Promise<calendar_v3.Oauth2 | null> {
+async function getValidOAuth2Client(userId: string): Promise<google.auth.OAuth2 | null> {
   const user = await prisma.user.findUnique({ where: { id: userId } });
 
   if (!user || !user.googleAccessToken || !user.googleRefreshToken) {
@@ -95,11 +95,11 @@ async function getValidOAuth2Client(userId: string): Promise<calendar_v3.Oauth2 
     }
   }
 
-  return oauth2Client as unknown as calendar_v3.Oauth2;
+  return oauth2Client;
 }
 
 /**
- * Syncs an event to Google Calendar
+ * Syncs an event to Google Calendar and returns the Google Event ID
  */
 export async function syncEventToGoogle(
   userId: string,
@@ -109,12 +109,12 @@ export async function syncEventToGoogle(
   startTime: Date,
   endTime: Date,
   rrule: string | null
-): Promise<boolean> {
+): Promise<string | null> {
   try {
     const oauth2Client = await getValidOAuth2Client(userId);
     if (!oauth2Client) {
       console.log(`User ${userId} has not connected Google Calendar`);
-      return false;
+      return null;
     }
 
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
@@ -140,9 +140,35 @@ export async function syncEventToGoogle(
     });
 
     console.log(`Event synced to Google Calendar: ${result.data.id}`);
-    return true;
+    return result.data.id || null;
   } catch (error) {
     console.error('Error syncing event to Google Calendar:', error);
+    return null;
+  }
+}
+
+/**
+ * Deletes an event from Google Calendar
+ */
+export async function deleteEventFromGoogle(userId: string, googleEventId: string): Promise<boolean> {
+  try {
+    const oauth2Client = await getValidOAuth2Client(userId);
+    if (!oauth2Client) {
+      console.log(`User ${userId} has not connected Google Calendar`);
+      return false;
+    }
+
+    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+    await calendar.events.delete({
+      calendarId: 'primary',
+      eventId: googleEventId,
+    });
+
+    console.log(`Event deleted from Google Calendar: ${googleEventId}`);
+    return true;
+  } catch (error) {
+    console.error('Error deleting event from Google Calendar:', error);
     return false;
   }
 }

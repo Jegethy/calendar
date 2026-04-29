@@ -2,15 +2,32 @@
 
 import { useState, useEffect } from 'react';
 import { Event, User } from '@/types';
+import GoogleLogo from './GoogleLogo';
 
 interface EventModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: Partial<Event>) => Promise<void>;
+  onSave: (data: Partial<Event> & { syncToGoogle?: boolean }) => Promise<void>;
   onDelete?: () => Promise<void>;
   event?: Event | null;
   selectedDate?: Date | null;
   currentUser: User;
+}
+
+function getLocalDateString(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function getLocalTimeString(date: Date): string {
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
+
+function parseLocalDateString(dateStr: string): Date {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
 }
 
 export default function EventModal({
@@ -29,7 +46,11 @@ export default function EventModal({
   const [endDate, setEndDate] = useState('');
   const [endTime, setEndTime] = useState('10:00');
   const [recurrence, setRecurrence] = useState('none');
+  const [syncToGoogle, setSyncToGoogle] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  const isGoogleConnected = !!currentUser.googleAccessToken;
+  const isAlreadySynced = !!event?.googleEventId;
 
   useEffect(() => {
     if (event) {
@@ -37,13 +58,14 @@ export default function EventModal({
       setDescription(event.description || '');
       const start = new Date(event.startTime);
       const end = new Date(event.endTime);
-      setStartDate(formatDateInput(start));
-      setStartTime(formatTimeInput(start));
-      setEndDate(formatDateInput(end));
-      setEndTime(formatTimeInput(end));
+      setStartDate(getLocalDateString(start));
+      setStartTime(getLocalTimeString(start));
+      setEndDate(getLocalDateString(end));
+      setEndTime(getLocalTimeString(end));
       setRecurrence(parseRrule(event.rrule));
+      setSyncToGoogle(event.syncToGoogle ?? true);
     } else if (selectedDate) {
-      const d = formatDateInput(selectedDate);
+      const d = getLocalDateString(selectedDate);
       setStartDate(d);
       setEndDate(d);
       setStartTime('09:00');
@@ -51,16 +73,9 @@ export default function EventModal({
       setTitle('');
       setDescription('');
       setRecurrence('none');
+      setSyncToGoogle(true);
     }
   }, [event, selectedDate, isOpen]);
-
-  const formatDateInput = (date: Date) => {
-    return date.toISOString().split('T')[0];
-  };
-
-  const formatTimeInput = (date: Date) => {
-    return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-  };
 
   const parseRrule = (rrule?: string | null): string => {
     if (!rrule) return 'none';
@@ -83,14 +98,22 @@ export default function EventModal({
     e.preventDefault();
     setSaving(true);
     try {
-      const startDateTime = new Date(`${startDate}T${startTime}`);
-      const endDateTime = new Date(`${endDate}T${endTime}`);
+      // Create dates from local date/time strings
+      const startLocalDate = parseLocalDateString(startDate);
+      const [startHour, startMin] = startTime.split(':').map(Number);
+      startLocalDate.setHours(startHour, startMin, 0, 0);
+
+      const endLocalDate = parseLocalDateString(endDate);
+      const [endHour, endMin] = endTime.split(':').map(Number);
+      endLocalDate.setHours(endHour, endMin, 0, 0);
+
       await onSave({
         title,
         description,
-        startTime: startDateTime.toISOString(),
-        endTime: endDateTime.toISOString(),
+        startTime: startLocalDate.toISOString(),
+        endTime: endLocalDate.toISOString(),
         rrule: buildRrule(recurrence) || undefined,
+        syncToGoogle: isGoogleConnected ? syncToGoogle : undefined,
       });
       onClose();
     } finally {
@@ -123,14 +146,22 @@ export default function EventModal({
           <h2 className="text-lg font-semibold text-gray-900">
             {isEditing ? 'Edit Event' : 'New Event'}
           </h2>
-          <button
-            onClick={onClose}
-            className="p-1.5 hover:bg-gray-100 rounded-lg transition"
-          >
-            <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-3">
+            {isAlreadySynced && (
+              <div className="flex items-center gap-1">
+                <GoogleLogo size="sm" />
+                <span className="text-xs font-medium text-green-700">Synced</span>
+              </div>
+            )}
+            <button
+              onClick={onClose}
+              className="p-1.5 hover:bg-gray-100 rounded-lg transition"
+            >
+              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {isEditing && !canEdit && (
@@ -231,6 +262,22 @@ export default function EventModal({
               <option value="monthly">Monthly</option>
             </select>
           </div>
+
+          {isGoogleConnected && canEdit && (
+            <div className="flex items-center gap-3 p-3 bg-indigo-50 rounded-lg">
+              <input
+                type="checkbox"
+                id="syncToGoogle"
+                checked={syncToGoogle}
+                onChange={(e) => setSyncToGoogle(e.target.checked)}
+                className="w-4 h-4 accent-indigo-600 rounded cursor-pointer"
+              />
+              <GoogleLogo size="sm" />
+              <label htmlFor="syncToGoogle" className="text-sm font-medium text-gray-700 cursor-pointer">
+                Sync to Google Calendar
+              </label>
+            </div>
+          )}
 
           {canEdit && (
             <div className="flex gap-3 pt-2">
