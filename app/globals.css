@@ -1,3 +1,93 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html {
+    @apply transition-colors duration-200;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-white text-gray-900 transition-colors duration-200;
+  }
+
+  html.dark body {
+    @apply bg-zinc-950 text-zinc-100;
+  }
+
+  /* Deep charcoal background with proper depth hierarchy */
+  html.dark {
+    --bg-base: #09090b;
+    --bg-elevated: #18181b;
+    --bg-card: #27272a;
+    --border-color: #3f3f46;
+  }
+
+  /* Smooth transitions for theme switching */
+  html.dark header {
+    @apply bg-zinc-900 border-zinc-800;
+  }
+
+  html.dark main,
+  html.dark section {
+    @apply transition-colors duration-200;
+  }
+
+  /* Form elements */
+  html.dark input:not([type="checkbox"]):not([type="radio"]),
+  html.dark select,
+  html.dark textarea {
+    @apply bg-zinc-800 border-zinc-700 text-zinc-100;
+  }
+
+  html.dark input::placeholder,
+  html.dark textarea::placeholder {
+    @apply text-zinc-500;
+  }
+
+  html.dark label {
+    @apply text-zinc-200;
+  }
+
+  /* Links and focus states */
+  html.dark a {
+    @apply text-indigo-400 hover:text-indigo-300;
+  }
+
+  html.dark input:focus,
+  html.dark select:focus,
+  html.dark textarea:focus {
+    @apply border-indigo-600 ring-indigo-600;
+  }
+
+  /* Disabled states */
+  html.dark input:disabled,
+  html.dark select:disabled,
+  html.dark textarea:disabled {
+    @apply bg-zinc-800 text-zinc-500;
+  }
+
+  /* Buttons */
+  html.dark button {
+    @apply transition-colors duration-200;
+  }
+
+  /* Checkboxes */
+  html.dark input[type="checkbox"],
+  html.dark input[type="radio"] {
+    @apply bg-zinc-800 border-zinc-700 accent-indigo-600;
+  }
+
+  /* Selection highlight */
+  html.dark ::selection {
+    @apply bg-indigo-600 text-zinc-50;
+  }
+}

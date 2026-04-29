@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { ThemeProvider } from '@/components/ThemeProvider';
 
 export const metadata: Metadata = {
   title: 'Scott & Sue\'s Shared Calendar',
@@ -12,8 +13,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body style={{ fontFamily: 'ui-sans-serif, system-ui, -apple-system, sans-serif' }}>{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <body style={{ fontFamily: 'ui-sans-serif, system-ui, -apple-system, sans-serif' }}>
+        <ThemeProvider>{children}</ThemeProvider>
+      </body>
     </html>
   );
 }

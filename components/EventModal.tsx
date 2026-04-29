@@ -132,24 +132,24 @@ export default function EventModal({
   const canEdit = !event || event.creatorId === currentUser.id;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-6 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900">
+    <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center p-4 z-50 transition-colors">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-zinc-800">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-100">
             {isEditing ? 'Edit Event' : 'New Event'}
           </h2>
           <div className="flex items-center gap-3">
             {isAlreadySynced && (
               <div className="flex items-center gap-1">
                 <GoogleLogo size="sm" />
-                <span className="text-xs font-medium text-green-700">Synced</span>
+                <span className="text-xs font-medium text-green-700 dark:text-green-400">Synced</span>
               </div>
             )}
             <button
               onClick={onClose}
-              className="p-1.5 hover:bg-gray-100 rounded-lg transition"
+              className="p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition"
             >
-              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-gray-500 dark:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
@@ -157,8 +157,8 @@ export default function EventModal({
         </div>
 
         {isEditing && !canEdit && (
-          <div className="mx-6 mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-            <p className="text-sm text-amber-700">
+          <div className="mx-6 mt-4 p-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg">
+            <p className="text-sm text-amber-700 dark:text-amber-200">
               This event was created by <strong>{event.creator.name}</strong>. You can view but not edit it.
             </p>
           </div>
@@ -166,25 +166,25 @@ export default function EventModal({
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">Title *</label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               disabled={!canEdit}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none disabled:bg-gray-50 disabled:text-gray-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none disabled:bg-gray-50 dark:disabled:bg-zinc-800 disabled:text-gray-500 dark:disabled:text-zinc-500 dark:bg-zinc-800 dark:text-zinc-100"
               placeholder="Event title"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">Description</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               disabled={!canEdit}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none resize-none disabled:bg-gray-50 disabled:text-gray-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none resize-none disabled:bg-gray-50 dark:disabled:bg-zinc-800 disabled:text-gray-500 dark:disabled:text-zinc-500 dark:bg-zinc-800 dark:text-zinc-100"
               rows={2}
               placeholder="Optional description"
             />
@@ -192,24 +192,24 @@ export default function EventModal({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">Start Date</label>
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
                 disabled={!canEdit}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none disabled:bg-gray-50"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none disabled:bg-gray-50 dark:disabled:bg-zinc-800 disabled:text-gray-500 dark:disabled:text-zinc-500 dark:bg-zinc-800 dark:text-zinc-100"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">Start Time</label>
               <input
                 type="time"
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
                 disabled={!canEdit}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none disabled:bg-gray-50"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none disabled:bg-gray-50 dark:disabled:bg-zinc-800 disabled:text-gray-500 dark:disabled:text-zinc-500 dark:bg-zinc-800 dark:text-zinc-100"
                 required
               />
             </div>
@@ -217,36 +217,36 @@ export default function EventModal({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">End Date</label>
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
                 disabled={!canEdit}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none disabled:bg-gray-50"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none disabled:bg-gray-50 dark:disabled:bg-zinc-800 disabled:text-gray-500 dark:disabled:text-zinc-500 dark:bg-zinc-800 dark:text-zinc-100"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">End Time</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">End Time</label>
               <input
                 type="time"
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
                 disabled={!canEdit}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none disabled:bg-gray-50"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none disabled:bg-gray-50 dark:disabled:bg-zinc-800 disabled:text-gray-500 dark:disabled:text-zinc-500 dark:bg-zinc-800 dark:text-zinc-100"
                 required
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Recurrence</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">Recurrence</label>
             <select
               value={recurrence}
               onChange={(e) => setRecurrence(e.target.value)}
               disabled={!canEdit}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none disabled:bg-gray-50"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none disabled:bg-gray-50 dark:disabled:bg-zinc-800 disabled:text-gray-500 dark:disabled:text-zinc-500 dark:bg-zinc-800 dark:text-zinc-100"
             >
               <option value="none">No recurrence</option>
               <option value="daily">Daily</option>
@@ -256,7 +256,7 @@ export default function EventModal({
           </div>
 
           {isGoogleConnected && canEdit && (
-            <div className="flex items-center gap-3 p-3 bg-indigo-50 rounded-lg">
+            <div className="flex items-center gap-3 p-3 bg-indigo-50 dark:bg-indigo-950 rounded-lg">
               <input
                 type="checkbox"
                 id="syncToGoogle"
@@ -265,7 +265,7 @@ export default function EventModal({
                 className="w-4 h-4 accent-indigo-600 rounded cursor-pointer"
               />
               <GoogleLogo size="sm" />
-              <label htmlFor="syncToGoogle" className="text-sm font-medium text-gray-700 cursor-pointer">
+              <label htmlFor="syncToGoogle" className="text-sm font-medium text-gray-700 dark:text-indigo-200 cursor-pointer">
                 Sync to Google Calendar
               </label>
             </div>
@@ -278,7 +278,7 @@ export default function EventModal({
                   type="button"
                   onClick={handleDelete}
                   disabled={saving}
-                  className="px-4 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition text-sm font-medium"
+                  className="px-4 py-2 border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-950 transition text-sm font-medium"
                 >
                   Delete
                 </button>
@@ -287,7 +287,7 @@ export default function EventModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition text-sm font-medium"
+                className="px-4 py-2 border border-gray-300 dark:border-zinc-700 text-gray-700 dark:text-zinc-300 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-800 transition text-sm font-medium"
               >
                 Cancel
               </button>
@@ -305,7 +305,7 @@ export default function EventModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition text-sm font-medium"
+                className="px-4 py-2 border border-gray-300 dark:border-zinc-700 text-gray-700 dark:text-zinc-300 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-800 transition text-sm font-medium"
               >
                 Close
               </button>

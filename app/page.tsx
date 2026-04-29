@@ -92,10 +92,10 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-zinc-950 transition-colors">
         <div className="text-center">
           <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-          <p className="text-gray-500 text-sm">Loading...</p>
+          <p className="text-gray-500 dark:text-zinc-400 text-sm">Loading...</p>
         </div>
       </div>
     );
@@ -106,16 +106,16 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 flex flex-col transition-colors">
       <Header user={user} onColorChange={handleColorChange} />
       <main className="flex-1 p-4 md:p-6 max-w-7xl mx-auto w-full">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 md:p-6 h-full">
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-200 dark:border-zinc-800 p-4 md:p-6 h-full transition-colors">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               {uniqueCreators.map((creator) => (
                 <div key={creator.id} className="flex items-center gap-1.5">
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: creator.color }} />
-                  <span className="text-xs text-gray-600">{creator.name}</span>
+                  <span className="text-xs text-gray-600 dark:text-zinc-400">{creator.name}</span>
                 </div>
               ))}
             </div>

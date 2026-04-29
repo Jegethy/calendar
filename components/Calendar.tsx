@@ -108,24 +108,24 @@ export default function Calendar({ events, onDayClick, onEventClick, selectedDat
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <h2 className="text-xl font-semibold text-gray-900">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-zinc-100">
             {MONTH_NAMES[viewMonth]} {viewYear}
           </h2>
           <button
             onClick={goToday}
-            className="text-xs px-2.5 py-1 border border-gray-300 rounded-md hover:bg-gray-50 transition text-gray-600"
+            className="text-xs px-2.5 py-1 border border-gray-300 dark:border-zinc-700 rounded-md hover:bg-gray-50 dark:hover:bg-zinc-800 transition text-gray-600 dark:text-zinc-400"
           >
             Today
           </button>
         </div>
         <div className="flex items-center gap-1">
-          <button onClick={prevMonth} className="p-2 hover:bg-gray-100 rounded-lg transition">
-            <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <button onClick={prevMonth} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition">
+            <svg className="w-4 h-4 text-gray-600 dark:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <button onClick={nextMonth} className="p-2 hover:bg-gray-100 rounded-lg transition">
-            <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <button onClick={nextMonth} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition">
+            <svg className="w-4 h-4 text-gray-600 dark:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </button>
@@ -134,13 +134,13 @@ export default function Calendar({ events, onDayClick, onEventClick, selectedDat
 
       <div className="grid grid-cols-7 mb-1">
         {DAY_NAMES.map((day) => (
-          <div key={day} className="text-center text-xs font-medium text-gray-500 py-2">
+          <div key={day} className="text-center text-xs font-medium text-gray-500 dark:text-zinc-500 py-2">
             {day}
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-7 flex-1 border-t border-l border-gray-200">
+      <div className="grid grid-cols-7 flex-1 border-t border-l border-gray-200 dark:border-zinc-800">
         {calendarDays.map((day, idx) => {
           const isToday = isSameDay(day.date, today);
           const isSelected = selectedDate && isSameDay(day.date, selectedDate);
@@ -154,10 +154,10 @@ export default function Calendar({ events, onDayClick, onEventClick, selectedDat
             <div
               key={idx}
               onClick={() => onDayClick(day.date)}
-              className={`border-b border-r border-gray-200 p-1 min-h-[100px] cursor-pointer transition-colors ${
+              className={`border-b border-r border-gray-200 dark:border-zinc-800 p-1 min-h-[100px] cursor-pointer transition-colors ${
                 day.isCurrentMonth
-                  ? 'bg-white hover:bg-gray-50'
-                  : 'bg-gray-50/50'
+                  ? 'bg-white dark:bg-zinc-950 hover:bg-gray-50 dark:hover:bg-zinc-900'
+                  : 'bg-gray-50 dark:bg-zinc-950 dark:bg-opacity-50'
               }`}
               style={cellBackgroundStyle}
             >
@@ -166,8 +166,8 @@ export default function Calendar({ events, onDayClick, onEventClick, selectedDat
                   isToday
                     ? 'bg-indigo-600 text-white'
                     : day.isCurrentMonth
-                    ? 'text-gray-900'
-                    : 'text-gray-400'
+                    ? 'text-gray-900 dark:text-zinc-300'
+                    : 'text-gray-400 dark:text-zinc-600'
                 }`}
                 style={dateNumberStyle}
               >
@@ -181,7 +181,7 @@ export default function Calendar({ events, onDayClick, onEventClick, selectedDat
                       e.stopPropagation();
                       onEventClick(ev.originalEvent);
                     }}
-                    className="w-full text-left text-xs px-1.5 py-0.5 rounded truncate text-white font-medium block relative"
+                    className="w-full text-left text-xs px-1.5 py-0.5 rounded truncate text-white font-medium block relative hover:opacity-90 transition"
                     style={{ backgroundColor: ev.color }}
                     title={ev.title}
                   >
@@ -196,7 +196,7 @@ export default function Calendar({ events, onDayClick, onEventClick, selectedDat
                   </button>
                 ))}
                 {hiddenCount > 0 && (
-                  <div className="text-xs text-gray-500 pl-1">+{hiddenCount} more</div>
+                  <div className="text-xs text-gray-500 dark:text-zinc-500 pl-1">+{hiddenCount} more</div>
                 )}
               </div>
             </div>
