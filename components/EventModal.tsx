@@ -3,6 +3,15 @@
 import { useState, useEffect } from 'react';
 import { Event, User } from '@/types';
 import GoogleLogo from './GoogleLogo';
+import {
+  getLocalDateString,
+  getLocalTimeString,
+  parseLocalDateString,
+  createLocalDateTimeISO,
+  isValidDateString,
+  isValidTimeString,
+} from '@/lib/date-utils';
+import { parseRruleFrequency, buildRrule } from '@/lib/rrule-utils';
 
 interface EventModalProps {
   isOpen: boolean;
@@ -12,22 +21,6 @@ interface EventModalProps {
   event?: Event | null;
   selectedDate?: Date | null;
   currentUser: User;
-}
-
-function getLocalDateString(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-function getLocalTimeString(date: Date): string {
-  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-}
-
-function parseLocalDateString(dateStr: string): Date {
-  const [year, month, day] = dateStr.split('-').map(Number);
-  return new Date(year, month - 1, day);
 }
 
 export default function EventModal({
@@ -50,7 +43,7 @@ export default function EventModal({
   const [saving, setSaving] = useState(false);
 
   const isGoogleConnected = !!currentUser.googleAccessToken;
-  const isAlreadySynced = !!event?.googleEventId;
+  const isAlreadySynced = !!event?.syncToGoogle;
 
   useEffect(() => {
     if (event) {
@@ -62,7 +55,7 @@ export default function EventModal({
       setStartTime(getLocalTimeString(start));
       setEndDate(getLocalDateString(end));
       setEndTime(getLocalTimeString(end));
-      setRecurrence(parseRrule(event.rrule));
+      setRecurrence(parseRruleFrequency(event.rrule));
       setSyncToGoogle(event.syncToGoogle ?? true);
     } else if (selectedDate) {
       const d = getLocalDateString(selectedDate);
@@ -77,42 +70,41 @@ export default function EventModal({
     }
   }, [event, selectedDate, isOpen]);
 
-  const parseRrule = (rrule?: string | null): string => {
-    if (!rrule) return 'none';
-    if (rrule.includes('FREQ=DAILY')) return 'daily';
-    if (rrule.includes('FREQ=WEEKLY')) return 'weekly';
-    if (rrule.includes('FREQ=MONTHLY')) return 'monthly';
-    return 'none';
-  };
-
-  const buildRrule = (recurrence: string): string | null => {
-    switch (recurrence) {
-      case 'daily': return 'FREQ=DAILY';
-      case 'weekly': return 'FREQ=WEEKLY';
-      case 'monthly': return 'FREQ=MONTHLY';
-      default: return null;
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate inputs
+    if (!title.trim()) {
+      alert('Please enter a title');
+      return;
+    }
+    
+    if (!isValidDateString(startDate) || !isValidDateString(endDate)) {
+      alert('Invalid date format');
+      return;
+    }
+    
+    if (!isValidTimeString(startTime) || !isValidTimeString(endTime)) {
+      alert('Invalid time format');
+      return;
+    }
+    
+    const startDateTime = createLocalDateTimeISO(startDate, startTime);
+    const endDateTime = createLocalDateTimeISO(endDate, endTime);
+    
+    if (startDateTime >= endDateTime) {
+      alert('Start time must be before end time');
+      return;
+    }
+
     setSaving(true);
     try {
-      // Create dates from local date/time strings
-      const startLocalDate = parseLocalDateString(startDate);
-      const [startHour, startMin] = startTime.split(':').map(Number);
-      startLocalDate.setHours(startHour, startMin, 0, 0);
-
-      const endLocalDate = parseLocalDateString(endDate);
-      const [endHour, endMin] = endTime.split(':').map(Number);
-      endLocalDate.setHours(endHour, endMin, 0, 0);
-
       await onSave({
-        title,
-        description,
-        startTime: startLocalDate.toISOString(),
-        endTime: endLocalDate.toISOString(),
-        rrule: buildRrule(recurrence) || undefined,
+        title: title.trim(),
+        description: description.trim() || null,
+        startTime: startDateTime,
+        endTime: endDateTime,
+        rrule: buildRrule(recurrence as any) || undefined,
         syncToGoogle: isGoogleConnected ? syncToGoogle : undefined,
       });
       onClose();

@@ -2,7 +2,8 @@
 
 import { useState, useMemo } from 'react';
 import { Event, CalendarDay } from '@/types';
-import { RRule } from 'rrule';
+import { getEventOccurrences } from '@/lib/rrule-utils';
+import { isSameDay } from '@/lib/date-utils';
 
 interface CalendarProps {
   events: Event[];
@@ -39,31 +40,26 @@ function getCalendarDays(year: number, month: number, events: Event[]): Calendar
   const calendarEnd = days[days.length - 1].date;
 
   for (const event of events) {
-    const occurrences = getEventOccurrences(event, calendarStart, calendarEnd);
+    const startTime = new Date(event.startTime);
+    const occurrences = getEventOccurrences(event.rrule, startTime, calendarStart, calendarEnd);
+    
     for (const occ of occurrences) {
-      const dayIndex = days.findIndex(
-        (d) =>
-          d.date.getFullYear() === occ.getFullYear() &&
-          d.date.getMonth() === occ.getMonth() &&
-          d.date.getDate() === occ.getDate()
-      );
+      const dayIndex = days.findIndex((d) => isSameDay(d.date, occ));
+      
       if (dayIndex !== -1) {
-        const startTime = new Date(event.startTime);
         const endTime = new Date(event.endTime);
         const duration = endTime.getTime() - startTime.getTime();
-        const occStart = new Date(occ);
-        occStart.setHours(startTime.getHours(), startTime.getMinutes());
-        const occEnd = new Date(occStart.getTime() + duration);
+        const occEnd = new Date(occ.getTime() + duration);
 
         days[dayIndex].events.push({
           id: `${event.id}-${occ.getTime()}`,
           title: event.title,
           color: event.creator.color,
-          startTime: occStart,
+          startTime: occ,
           endTime: occEnd,
           isRecurring: !!event.rrule,
           originalEvent: event,
-          isSyncedToGoogle: !!event.googleEventId,
+          isSyncedToGoogle: event.syncToGoogle,
         });
       }
     }
@@ -74,29 +70,6 @@ function getCalendarDays(year: number, month: number, events: Event[]): Calendar
   }
 
   return days;
-}
-
-function getEventOccurrences(event: Event, rangeStart: Date, rangeEnd: Date): Date[] {
-  if (!event.rrule) {
-    const start = new Date(event.startTime);
-    if (start >= rangeStart && start <= rangeEnd) {
-      return [start];
-    }
-    return [];
-  }
-
-  try {
-    const dtstart = new Date(event.startTime);
-    const rruleStr = `DTSTART:${dtstart.toISOString().replace(/[-:]/g, '').split('.')[0]}Z\nRRULE:${event.rrule}`;
-    const rule = RRule.fromString(rruleStr);
-    return rule.between(rangeStart, rangeEnd, true);
-  } catch {
-    const start = new Date(event.startTime);
-    if (start >= rangeStart && start <= rangeEnd) {
-      return [start];
-    }
-    return [];
-  }
 }
 
 const MONTH_NAMES = [
@@ -169,15 +142,8 @@ export default function Calendar({ events, onDayClick, onEventClick, selectedDat
 
       <div className="grid grid-cols-7 flex-1 border-t border-l border-gray-200">
         {calendarDays.map((day, idx) => {
-          const isToday =
-            day.date.getFullYear() === today.getFullYear() &&
-            day.date.getMonth() === today.getMonth() &&
-            day.date.getDate() === today.getDate();
-          const isSelected =
-            selectedDate &&
-            day.date.getFullYear() === selectedDate.getFullYear() &&
-            day.date.getMonth() === selectedDate.getMonth() &&
-            day.date.getDate() === selectedDate.getDate();
+          const isToday = isSameDay(day.date, today);
+          const isSelected = selectedDate && isSameDay(day.date, selectedDate);
           const maxVisible = 3;
           const visibleEvents = day.events.slice(0, maxVisible);
           const hiddenCount = day.events.length - maxVisible;

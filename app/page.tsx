@@ -26,7 +26,7 @@ export default function Home() {
     const res = await fetch('/api/events');
     if (res.ok) {
       const data = await res.json();
-      setEvents(data.events);
+      setEvents(data.data?.events || []);
     }
   }, []);
 

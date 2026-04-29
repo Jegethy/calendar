@@ -1,7 +1,23 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { syncEventToGoogle, deleteEventFromGoogle } from '@/lib/google-calendar';
+import {
+  asyncBroadcastSyncToGoogle,
+  asyncBroadcastDeleteFromGoogle,
+  asyncBroadcastUpdateOnGoogle,
+  shouldSyncToGoogle,
+} from '@/lib/sync-utils';
+import {
+  successResponse,
+  unauthorizedError,
+  forbiddenError,
+  notFoundError,
+  validationError,
+  internalServerError,
+  noContentResponse,
+} from '@/lib/api-response';
+import { isValidRrule } from '@/lib/rrule-utils';
+import { Event } from '@/types';
 
 export async function PUT(
   request: NextRequest,
@@ -9,7 +25,7 @@ export async function PUT(
 ) {
   const user = await getCurrentUser();
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return unauthorizedError();
   }
 
   try {
@@ -19,55 +35,98 @@ export async function PUT(
 
     const existing = await prisma.event.findUnique({ where: { id } });
     if (!existing) {
-      return NextResponse.json({ error: 'Event not found' }, { status: 404 });
+      return notFoundError('Event not found');
     }
 
     if (existing.creatorId !== user.userId) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return forbiddenError();
     }
 
-    const updateData: Record<string, unknown> = {
-      title,
-      description,
-      startTime: startTime ? new Date(startTime) : undefined,
-      endTime: endTime ? new Date(endTime) : undefined,
-      rrule: rrule !== undefined ? rrule : undefined,
-    };
+    // Validate provided fields
+    if (title !== undefined && (typeof title !== 'string' || title.trim().length === 0)) {
+      return validationError('Title must be a non-empty string');
+    }
+
+    if (startTime !== undefined && typeof startTime !== 'string') {
+      return validationError('startTime must be an ISO 8601 string');
+    }
+
+    if (endTime !== undefined && typeof endTime !== 'string') {
+      return validationError('endTime must be an ISO 8601 string');
+    }
+
+    if (rrule !== undefined && !isValidRrule(rrule)) {
+      return validationError('Invalid recurrence rule format');
+    }
+
+    // Validate date range if both times are provided
+    if (startTime && endTime) {
+      try {
+        const start = new Date(startTime);
+        const end = new Date(endTime);
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+          return validationError('Invalid date format for startTime or endTime');
+        }
+        if (start >= end) {
+          return validationError('startTime must be before endTime');
+        }
+      } catch {
+        return validationError('Invalid date format for startTime or endTime');
+      }
+    }
+
+    // Build update data with only provided fields
+    const updateData: Partial<typeof existing> = {};
+
+    if (title !== undefined) updateData.title = title;
+    if (description !== undefined) updateData.description = description;
+    if (startTime !== undefined) updateData.startTime = startTime;
+    if (endTime !== undefined) updateData.endTime = endTime;
+    if (rrule !== undefined) updateData.rrule = rrule;
 
     // Handle sync preference changes
     if (syncToGoogle !== undefined) {
       updateData.syncToGoogle = !!syncToGoogle;
 
-      // If toggling on and not already synced, sync now
-      if (syncToGoogle && !existing.googleEventId) {
-        // Get the actual event data with title and times for syncing
-        const startTimeDate = startTime ? new Date(startTime) : existing.startTime;
-        const endTimeDate = endTime ? new Date(endTime) : existing.endTime;
-        const eventTitle = title || existing.title;
-        const eventDescription = description !== undefined ? description : existing.description;
-        const eventRrule = rrule !== undefined ? rrule : existing.rrule;
+      // If toggling on, sync to all users' Google Calendars
+      if (syncToGoogle) {
+        // Prepare event object for syncing with updated values
+        const eventToSync: Event = {
+          id: existing.id,
+          title: title || existing.title,
+          description: description !== undefined ? description : existing.description,
+          startTime: startTime || existing.startTime,
+          endTime: endTime || existing.endTime,
+          rrule: rrule !== undefined ? rrule : existing.rrule,
+          syncToGoogle: true,
+          creatorId: existing.creatorId,
+          creator: { id: user.userId, name: '', color: '' }, // Minimal, not used by sync
+          createdAt: existing.createdAt,
+          updatedAt: new Date().toISOString(),
+        };
 
-        // Sync to Google asynchronously
-        syncEventToGoogle(
-          user.userId,
-          id,
-          eventTitle,
-          eventDescription,
-          startTimeDate,
-          endTimeDate,
-          eventRrule
-        ).then((googleEventId) => {
-          if (googleEventId) {
-            prisma.event.update({
-              where: { id },
-              data: { googleEventId },
-            }).catch(error => {
-              console.error('Failed to update event with Google Event ID:', error);
-            });
-          }
-        }).catch(error => {
-          console.error('Failed to sync event to Google Calendar:', error);
-        });
+        // Broadcast sync to Google asynchronously
+        asyncBroadcastSyncToGoogle(eventToSync, user.userId);
+      }
+    } else if (shouldSyncToGoogle(existing as Event)) {
+      // If event details changed but sync preference unchanged, update on Google
+      if (title !== undefined || startTime !== undefined || endTime !== undefined || rrule !== undefined) {
+        const eventToSync: Event = {
+          id: existing.id,
+          title: title || existing.title,
+          description: description !== undefined ? description : existing.description,
+          startTime: startTime || existing.startTime,
+          endTime: endTime || existing.endTime,
+          rrule: rrule !== undefined ? rrule : existing.rrule,
+          syncToGoogle: true,
+          creatorId: existing.creatorId,
+          creator: { id: user.userId, name: '', color: '' },
+          createdAt: existing.createdAt,
+          updatedAt: new Date().toISOString(),
+        };
+
+        // Broadcast update to Google asynchronously
+        asyncBroadcastUpdateOnGoogle(eventToSync, existing.id);
       }
     }
 
@@ -81,10 +140,10 @@ export async function PUT(
       },
     });
 
-    return NextResponse.json({ event });
+    return successResponse<{ event: Event }>({ event: event as Event });
   } catch (error) {
     console.error('Update event error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return internalServerError();
   }
 }
 
@@ -94,37 +153,32 @@ export async function DELETE(
 ) {
   const user = await getCurrentUser();
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return unauthorizedError();
   }
 
-  const { id } = await params;
+  try {
+    const { id } = await params;
 
-  const existing = await prisma.event.findUnique({ where: { id } });
-  if (!existing) {
-    return NextResponse.json({ error: 'Event not found' }, { status: 404 });
+    const existing = await prisma.event.findUnique({ where: { id } });
+    if (!existing) {
+      return notFoundError('Event not found');
+    }
+
+    if (existing.creatorId !== user.userId) {
+      return forbiddenError();
+    }
+
+    // Delete from Google Calendar for all users (non-blocking)
+    if (existing.syncToGoogle) {
+      asyncBroadcastDeleteFromGoogle(id);
+    }
+
+    // Delete from local database
+    await prisma.event.delete({ where: { id } });
+
+    return noContentResponse();
+  } catch (error) {
+    console.error('Delete event error:', error);
+    return internalServerError();
   }
-
-  if (existing.creatorId !== user.userId) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
-
-  // Delete from Google Calendar if synced (non-blocking)
-  if (existing.googleEventId) {
-    deleteEventFromGoogle(user.userId, existing.googleEventId)
-      .then((success) => {
-        if (!success) {
-          console.warn(
-            `Failed to delete Google Calendar event ${existing.googleEventId}. ` +
-            `User may need to delete it manually from Google Calendar.`
-          );
-        }
-      })
-      .catch((error) => {
-        console.error('Error during Google Calendar deletion:', error);
-      });
-  }
-
-  // Always delete from local database (non-blocking Google deletion)
-  await prisma.event.delete({ where: { id } });
-  return NextResponse.json({ success: true });
 }

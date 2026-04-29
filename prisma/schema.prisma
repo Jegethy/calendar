@@ -14,23 +14,41 @@ model User {
   color               String   @default("#3b82f6")
   googleAccessToken   String?
   googleRefreshToken  String?
-  googleTokenExpiry   DateTime?
+  googleTokenExpiresAt DateTime?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
   events              Event[]
+  googleSyncs         GoogleSync[]
 }
 
 model Event {
   id            String   @id @default(cuid())
   title         String
   description   String?
-  startTime     DateTime
-  endTime       DateTime
+  startTime     String   @db.Text
+  endTime       String   @db.Text
   rrule         String?
-  googleEventId String?
   syncToGoogle  Boolean  @default(false)
   creatorId     String
-  creator       User     @relation(fields: [creatorId], references: [id])
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  creator       User     @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  createdAt     String
+  updatedAt     String
+  googleSyncs   GoogleSync[]
+
+  @@index([creatorId])
+}
+
+model GoogleSync {
+  id           String   @id @default(cuid())
+  eventId      String
+  event        Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  googleEventId String   @unique
+  syncedAt     DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([eventId, userId])
+  @@index([userId])
+  @@index([googleEventId])
 }

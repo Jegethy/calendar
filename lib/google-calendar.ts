@@ -1,12 +1,21 @@
 import { calendar_v3, google } from 'googleapis';
 import { prisma } from './prisma';
+import { Event } from '@/types';
 
 const SCOPES = ['https://www.googleapis.com/auth/calendar'];
 
+// Cache for OAuth2 client to avoid recreation
+let cachedOAuth2Client: google.auth.OAuth2 | null = null;
+
 /**
- * Creates an OAuth2 client configured with Google credentials
+ * Creates or returns cached OAuth2 client configured with Google credentials
+ * Caching prevents unnecessary recreation across multiple function calls
  */
-function createOAuth2Client() {
+function getOAuth2Client(): google.auth.OAuth2 {
+  if (cachedOAuth2Client) {
+    return cachedOAuth2Client;
+  }
+
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
   const redirectUri = process.env.GOOGLE_REDIRECT_URI;
@@ -15,14 +24,15 @@ function createOAuth2Client() {
     throw new Error('Google OAuth credentials are not configured in environment variables');
   }
 
-  return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
+  cachedOAuth2Client = new google.auth.OAuth2(clientId, clientSecret, redirectUri);
+  return cachedOAuth2Client;
 }
 
 /**
  * Generates the Google OAuth2 authorization URL
  */
 export function getAuthorizationUrl(): string {
-  const oauth2Client = createOAuth2Client();
+  const oauth2Client = getOAuth2Client();
   const authUrl = oauth2Client.generateAuthUrl({
     access_type: 'offline',
     scope: SCOPES,
@@ -35,7 +45,7 @@ export function getAuthorizationUrl(): string {
  */
 export async function exchangeCodeForTokens(code: string, userId: string): Promise<void> {
   try {
-    const oauth2Client = createOAuth2Client();
+    const oauth2Client = getOAuth2Client();
     const { tokens } = await oauth2Client.getToken(code);
 
     if (!tokens.access_token || !tokens.refresh_token || !tokens.expiry_date) {
@@ -48,7 +58,7 @@ export async function exchangeCodeForTokens(code: string, userId: string): Promi
       data: {
         googleAccessToken: tokens.access_token,
         googleRefreshToken: tokens.refresh_token,
-        googleTokenExpiry: new Date(tokens.expiry_date),
+        googleTokenExpiresAt: new Date(tokens.expiry_date),
       },
     });
   } catch (error) {
@@ -59,23 +69,33 @@ export async function exchangeCodeForTokens(code: string, userId: string): Promi
 
 /**
  * Gets a valid OAuth2 client for a user, refreshing tokens if necessary
+ * Accepts tokens directly to avoid redundant database lookups
+ * 
+ * @param userId - User ID (for logging and token refresh)
+ * @param accessToken - Current access token
+ * @param refreshToken - Refresh token
+ * @param expiresAt - Token expiry date
+ * @returns OAuth2 client or null if tokens are invalid
  */
-async function getValidOAuth2Client(userId: string): Promise<google.auth.OAuth2 | null> {
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-
-  if (!user || !user.googleAccessToken || !user.googleRefreshToken) {
+async function getAuthenticatedOAuth2Client(
+  userId: string,
+  accessToken: string | null,
+  refreshToken: string | null,
+  expiresAt: Date | null
+): Promise<google.auth.OAuth2 | null> {
+  if (!accessToken || !refreshToken) {
     return null;
   }
 
-  const oauth2Client = createOAuth2Client();
+  const oauth2Client = getOAuth2Client();
   oauth2Client.setCredentials({
-    access_token: user.googleAccessToken,
-    refresh_token: user.googleRefreshToken,
-    expiry_date: user.googleTokenExpiry?.getTime(),
+    access_token: accessToken,
+    refresh_token: refreshToken,
+    expiry_date: expiresAt?.getTime(),
   });
 
   // Check if token is expired and refresh if necessary
-  if (user.googleTokenExpiry && new Date() >= user.googleTokenExpiry) {
+  if (expiresAt && new Date() >= expiresAt) {
     try {
       const { credentials } = await oauth2Client.refreshAccessToken();
       if (credentials.access_token && credentials.expiry_date) {
@@ -84,7 +104,7 @@ async function getValidOAuth2Client(userId: string): Promise<google.auth.OAuth2 
           where: { id: userId },
           data: {
             googleAccessToken: credentials.access_token,
-            googleTokenExpiry: new Date(credentials.expiry_date),
+            googleTokenExpiresAt: new Date(credentials.expiry_date),
           },
         });
         oauth2Client.setCredentials(credentials);
@@ -99,19 +119,24 @@ async function getValidOAuth2Client(userId: string): Promise<google.auth.OAuth2 
 }
 
 /**
+ * Gets a valid OAuth2 client by user ID, fetching tokens from database
+ * Use this as the main entry point for getting an authenticated client
+ */
+async function getAuthenticatedOAuth2ClientForUser(userId: string): Promise<google.auth.OAuth2 | null> {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    return null;
+  }
+
+  return getAuthenticatedOAuth2Client(userId, user.googleAccessToken, user.googleRefreshToken, user.googleTokenExpiresAt);
+}
+
+/**
  * Syncs an event to Google Calendar and returns the Google Event ID
  */
-export async function syncEventToGoogle(
-  userId: string,
-  eventId: string,
-  title: string,
-  description: string | null,
-  startTime: Date,
-  endTime: Date,
-  rrule: string | null
-): Promise<string | null> {
+export async function syncEventToGoogle(event: Event, userId: string): Promise<string | null> {
   try {
-    const oauth2Client = await getValidOAuth2Client(userId);
+    const oauth2Client = await getAuthenticatedOAuth2ClientForUser(userId);
     if (!oauth2Client) {
       console.log(`User ${userId} has not connected Google Calendar`);
       return null;
@@ -119,16 +144,20 @@ export async function syncEventToGoogle(
 
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
+    // Parse dates from ISO strings
+    const startTime = new Date(event.startTime);
+    const endTime = new Date(event.endTime);
+
     // Build the event object
     const googleEvent: calendar_v3.Schema$Event = {
-      summary: title,
-      description: description || undefined,
+      summary: event.title,
+      description: event.description || undefined,
       start: { dateTime: startTime.toISOString() },
       end: { dateTime: endTime.toISOString() },
-      recurrence: rrule ? [rrule] : undefined,
+      recurrence: event.rrule ? [event.rrule] : undefined,
       extendedProperties: {
         private: {
-          calendarEventId: eventId,
+          calendarEventId: event.id,
         },
       },
     };
@@ -150,9 +179,9 @@ export async function syncEventToGoogle(
 /**
  * Deletes an event from Google Calendar
  */
-export async function deleteEventFromGoogle(userId: string, googleEventId: string): Promise<boolean> {
+export async function deleteEventFromGoogle(googleEventId: string, userId: string): Promise<boolean> {
   try {
-    const oauth2Client = await getValidOAuth2Client(userId);
+    const oauth2Client = await getAuthenticatedOAuth2ClientForUser(userId);
     if (!oauth2Client) {
       console.log(`User ${userId} has not connected Google Calendar`);
       return false;
@@ -184,8 +213,11 @@ export async function revokeGoogleAccess(userId: string): Promise<void> {
       return;
     }
 
-    const oauth2Client = createOAuth2Client();
-    await oauth2Client.revokeCredentials();
+    const oauth2Client = getOAuth2Client();
+    // Note: Revoke token directly (the access token, not the refresh token)
+    if (user.googleAccessToken) {
+      await oauth2Client.revokeCredentials();
+    }
 
     // Clear tokens from database
     await prisma.user.update({
@@ -193,7 +225,7 @@ export async function revokeGoogleAccess(userId: string): Promise<void> {
       data: {
         googleAccessToken: null,
         googleRefreshToken: null,
-        googleTokenExpiry: null,
+        googleTokenExpiresAt: null,
       },
     });
 
