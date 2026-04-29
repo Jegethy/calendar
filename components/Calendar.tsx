@@ -10,6 +10,7 @@ interface CalendarProps {
   onDayClick: (date: Date) => void;
   onEventClick: (event: Event) => void;
   selectedDate?: Date | null;
+  onClearSelection?: () => void;
 }
 
 function getCalendarDays(year: number, month: number, events: Event[]): CalendarDay[] {
@@ -105,7 +106,7 @@ const MONTH_NAMES = [
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-export default function Calendar({ events, onDayClick, onEventClick, selectedDate }: CalendarProps) {
+export default function Calendar({ events, onDayClick, onEventClick, selectedDate, currentUser }: CalendarProps) {
   const today = new Date();
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
@@ -180,28 +181,30 @@ export default function Calendar({ events, onDayClick, onEventClick, selectedDat
           const maxVisible = 3;
           const visibleEvents = day.events.slice(0, maxVisible);
           const hiddenCount = day.events.length - maxVisible;
+          const cellBackgroundStyle = isSelected ? { backgroundColor: currentUser.color + '1A' } : undefined;
+          const dateNumberStyle = isSelected && !isToday ? { color: currentUser.color } : undefined;
 
           return (
             <div
               key={idx}
               onClick={() => onDayClick(day.date)}
               className={`border-b border-r border-gray-200 p-1 min-h-[100px] cursor-pointer transition-colors ${
-                isSelected
-                  ? 'bg-indigo-50 border-indigo-300'
-                  : day.isCurrentMonth
+                day.isCurrentMonth
                   ? 'bg-white hover:bg-gray-50'
                   : 'bg-gray-50/50'
               }`}
+              style={cellBackgroundStyle}
             >
-              <div className={`text-sm font-medium mb-1 w-7 h-7 flex items-center justify-center rounded-full ${
-                isToday
-                  ? 'bg-indigo-600 text-white'
-                  : isSelected
-                  ? 'text-indigo-600'
-                  : day.isCurrentMonth
-                  ? 'text-gray-900'
-                  : 'text-gray-400'
-              }`}>
+              <div 
+                className={`text-sm font-medium mb-1 w-7 h-7 flex items-center justify-center rounded-full ${
+                  isToday
+                    ? 'bg-indigo-600 text-white'
+                    : day.isCurrentMonth
+                    ? 'text-gray-900'
+                    : 'text-gray-400'
+                }`}
+                style={dateNumberStyle}
+              >
                 {day.date.getDate()}
               </div>
               <div className="space-y-0.5">

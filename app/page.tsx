@@ -141,7 +141,11 @@ export default function Home() {
 
       <EventModal
         isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={() => {
+          setModalOpen(false);
+          setSelectedDate(null);
+          setSelectedEvent(null);
+        }}
         onSave={handleSave}
         onDelete={selectedEvent?.creatorId === user.id ? handleDelete : undefined}
         event={selectedEvent}
